@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const xmlParser = require('fast-xml-parser');
 const he = require('he');
+const builder = require('xmlbuilder');
 
 const PORT = 8000;
 
@@ -14,13 +15,16 @@ const server = http.createServer((req, res) => {
                 res.end('Internal Server Error');
             } else {
                 const jsonObj = xmlParser.parse(data);
-                console.log(jsonObj.indicators.inflation)
                 const filteredValues = jsonObj.indicators.inflation.filter(
                     (item) => item.ku === 13 && parseFloat(item.value) > 5
                 );
-                const transformedXml = `<data>\n${filteredValues
-                    .map((item) => `  <value>${he.encode(item.value.toString())}</value>`)
-                    .join('\n')}\n</data>`;
+
+                const root = builder.create('data');
+                filteredValues.forEach((item) => {
+                    root.ele('value', {}, he.encode(item.value.toString()));
+                });
+
+                const transformedXml = root.end({ pretty: true });
 
                 res.writeHead(200, { 'Content-Type': 'application/xml' });
                 res.end(transformedXml);
